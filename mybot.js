@@ -17,7 +17,7 @@ function make_move() {
 
   var rand = Math.random() * 4;
 
-  return eat_closest(board) || EAST;
+  return eat_closest(board) || find_closest(board) || EAST;
 
   return PASS;
 }
@@ -52,18 +52,26 @@ function find_closest(board, nb){
   var n = typeof nb !== "undefined" ? nb : 1;
 
 
-  for (j=my_x-n;j<my_x+n+1;j++){
-    for (i=my_y-n;i<my_y+n+1;i++){
-      res.push([j,i]);
+  while (res2.length == 0 && n < board.length){
+    for (j=my_x-n;j<my_x+n+1;j++){
+      for (i=my_y-n;i<my_y+n+1;i++){
+        res.push([j,i]);
+      }
     }
-  }
-
-  for (i=0;i<res.length;i++){
-    if (board[res[i][0]] && has_item(board[res[i][0]][res[i][1]]) && res[i][0] !== get_opponent_x() && res[i][1] !== get_opponent_y()) 
+    for (i=0;i<res.length;i++){
+      if (board[res[i][0]] && has_item(board[res[i][0]][res[i][1]])) 
       {res2.push(res[i]);}
+    }
+    res2.remove_assoc_pair([my_x, my_y]);
+    n++;
   }
 
-  console.log(res2);
+  if (res2.length > 0){
+    if (res2[0][1] < my_y){return NORTH;}
+    if (res2[0][1] > my_y){return SOUTH;}
+  
+  
+  }
 }
 
 // Optionally include this function if you'd like to always reset to a 
@@ -73,3 +81,15 @@ function find_closest(board, nb){
 function default_board_number() {
     return 123;
 }
+
+// homemade ghetto Filter
+Array.prototype.remove_assoc_pair = function(arr){
+  for (i=0;i<this.length;i++){
+    if (this[i][0] === arr[0] && this[i][1] === arr[1]){
+      this.splice(i,1);
+      i--;
+    }
+  }
+  return this;
+}
+
