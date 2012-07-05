@@ -2,6 +2,8 @@
 //
 //very very much a work in progress !!!
 
+var quadrant;
+
 function new_game() {
 }
 
@@ -15,7 +17,7 @@ function make_move() {
 
   find_closest(board);
 
-  var rand = Math.random() * 4;
+
 
   return eat_closest(board) || find_closest(board) || EAST;
 
@@ -66,12 +68,28 @@ function find_closest(board, nb){
     n++;
   }
 
-  if (res2.length > 0){
-    if (res2[0][1] < my_y){return NORTH;}
-    if (res2[0][1] > my_y){return SOUTH;}
-  
-  
+  for (i=0;i<res2.length;i++){
+    res2[i].push(Math.abs(my_x - res2[i][0]) + Math.abs(my_y - res2[i][1]));
   }
+
+  res2.sort(function(a,b){
+    if (a[2] < b[2]) return -1;
+    if (a[2] > b[2]) return 1;
+    return 0;
+  });
+
+  var target = res2[0].slice(0,2); 
+
+  if (typeof quadrant === 'undefined') quadrant = [my_x,my_y];
+  console.log(quadrant);
+
+  if (target[1] === my_y && my_x < target[0]) return EAST;
+  if (target[1] === my_y && my_x > target[0]) return WEST;
+  if (target[0] === my_x && my_x < target[1]) return SOUTH;
+  if (target[0] === my_x && my_x > target[1]) return NORTH;
+  if (target[1] > my_y) {return SOUTH} else {return NORTH};
+  if (target[0] > my_x) {return WEST} else {return EAST};
+
 }
 
 // Optionally include this function if you'd like to always reset to a 
@@ -79,7 +97,7 @@ function find_closest(board, nb){
 // bot(s) against known positions.
 //
 function default_board_number() {
-    return 123;
+    return 815692;
 }
 
 // homemade ghetto Filter
