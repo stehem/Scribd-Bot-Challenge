@@ -1,68 +1,54 @@
-//http://www.scribd.com/jobs/botrace_api
-//
-//very very much a work in progress !!!
+// v2, less dumb, still not the brightest tool in the shed...
 
 
+var target;
 
-function make_move() {
+
+function make_move(){
   var board = get_board(),
       my_x = get_my_x(),
       my_y = get_my_y(),
       width = WIDTH,
-      height = HEIGHT;
-
-  // we found an item! take it!
-  if (board[my_x][my_y] > 0) {
-    return TAKE;
-  }
-
-  //get all quadrants
-  var sw_quad = get_quadrant(0,my_x+1,my_y,height+1),
-      se_quad = get_quadrant(my_x,width,my_y,height+1),
+      height = HEIGHT,
+      se_quad = get_quadrant(my_x,width,my_y,height),
+      sw_quad = get_quadrant(0,my_x+1,my_y,height),
       nw_quad = get_quadrant(0,my_x+1,0,my_y+1),
       ne_quad = get_quadrant(my_x,width,0,my_y+1),
       quads = [sw_quad,se_quad,nw_quad,ne_quad];
-
-  var fruits_in_sw = fruits_in_quad(sw_quad,0,my_y),
-      fruits_in_se = fruits_in_quad(se_quad,my_x,my_y),
-      fruits_in_nw = fruits_in_quad(nw_quad,0,0),
-      fruits_in_ne = fruits_in_quad(ne_quad,my_x,0);
-
-
-  var target = get_closest_in_quad(fruits_in_quad(quad_with_most_types(quads),x,y));
-  
-
-  if (target[1] === my_y && my_x < target[0]) return EAST;
-  if (target[1] === my_y && my_x > target[0]) return WEST;
-  if (target[0] === my_x && my_x < target[1]) return SOUTH;
-  if (target[0] === my_x && my_x > target[1]) return NORTH;
-  if (target[1] > my_y) {return SOUTH} else {return NORTH};
-  if (target[0] > my_x) {return WEST} else {return EAST};
-
-
-
-
+  if (board[my_x][my_y] > 0){
+    if (typeof target !== 'undefined' && target[0] === my_x && target[1] === my_y) target = undefined;
+    return TAKE;
+  }
+  if (typeof target !== 'undefined' && board[target[0]][target[1]] === 0) target = undefined;
+  if (typeof target !== 'undefined') {
+    return go_towards_target(target);
+  }else{
+    target = get_best_in_quad(quad_with_most_types(quads)) || get_closest_in_quad(quad_with_most_types(quads));
+    return go_towards_target(target);
+  };
 }
 
-function get_quadrant(n,limit,start,end){
+
+function get_quadrant(a,b,c,d){
   var quad = [];
-  for (i=n;i<limit;i++){
-    quad.push(board[i].slice(start,end));
-  } 
+  for (i=a;i<b;i++){
+    for (j=c;j<d;j++){
+      quad.push([i,j]);
+    }
+  }
   return quad;
 }
 
 
 function count_types(quad){
-  var res = [];
+  var board = get_board(),
+      res = [];
   for (i=1;i<get_number_of_item_types()+1;i++){
     res.push(0);
   }
-
-  for (i=0;i<quad.length;i++){
-    for (j=0;j<quad[i].length;j++){
-      if (quad[i][j] !== 0) res[quad[i][j]-1] = 1;
-    }
+  for (j=0;j<quad.length;j++){
+    var r = board[quad[j][0]][quad[j][1]];
+    if (r !== 0) res[r-1] = 1;
   }
   return res.count(1);
 }
@@ -82,40 +68,85 @@ function quad_with_most_types(quads){
 }
 
 
-function fruits_in_quad(quad,x,y){
-  var res = [];
+function get_closest_in_quad(quad){
+  var board = get_board(),
+      my_x = get_my_x(),
+      my_y = get_my_y();
+      res = [];
   for (i=0;i<quad.length;i++){
-    for (j=0;j<quad[i].length;j++){
-      if (quad[i][j] !== 0) res.push([i+x,j+y]);
+    var r = board[quad[i][0]][quad[i][1]];
+    if (r !== 0) {
+      res.push([Math.abs(my_x-quad[i][0])+Math.abs(my_y-quad[i][1]),quad[i]]);
     }
   }
-  return res;
-}
-
-
-function get_closest_in_quad(fruits){
-  for (i=0;i<fruits.length;i++){
-    fruits[i].push(Math.abs(my_x - fruits[i][0]) + Math.abs(my_y - fruits[i][1]));
-  }
-
-  fruits.sort(function(a,b){
-    if (a[2] < b[2]) return -1;
-    if (a[2] > b[2]) return 1;
+  res.sort(function(a,b){
+    if (a[0] < b[0]) return -1;
+    if (a[0] > b[0]) return 1;
     return 0;
   });
+  return res[0][1];
+}
 
-  return fruits[0].slice(0,2);
+function best_to_eat(){
+res = [];
+for (i=1;i<6;i++){
+res.push([i,Math.abs(get_my_item_count(i)-get_opponent_item_count(i))]);
+}
+  res.sort(function(a,b){
+    if (a[1] < b[1]) return -1;
+    if (a[1] > b[1]) return 1;
+    return 0;
+  });
+return res[0][0];
+}
+
+function get_best_in_quad(quad){
+  res =[];
+  for (i=0;i++;i<quad.length){
+    var r = board[quad[i][0]][quad[i][1]];
+    if (r === best_to_eat()) res.push(quad[i]);
+  }
+  if (res.length > 0) return res[0];
+  return false;
 }
 
 
 
+function go_towards_target(target){
+  var board = get_board(),
+      my_x = get_my_x(),
+      my_y = get_my_y();
+  if (target[1] === my_y && my_x < target[0]) return EAST;
+  if (target[1] === my_y && my_x > target[0]) return WEST;
+  if (target[0] === my_x && my_y < target[1]) return SOUTH;
+  if (target[0] === my_x && my_y > target[1]) return NORTH;
+  if (target[1] > my_y) {return SOUTH} else {return NORTH};
+  if (target[0] > my_x) {return WEST} else {return EAST};
+}
+
+
+function fruits_types_in_quad(quad){
+  var ftypes = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+  for (i=0;i<quad.length;i++){
+    var r = board[quad[i][0]][quad[i][1]];
+    if (r !== 0) ftypes[r] = ftypes[r] + 1
+  }
+  return ftypes;
+}
+
+
+function fruit_types_of_opponent(){
+  var otypes = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
+  for (i=0;i<6;i++){
+    otypes[i] = get_opponent_item_count(i);
+  }
+  return otypes;
+}
 
 
 
-
-
-function default_board_number() {
-    return 123;
+function default_board_number(){
+  return 439037;
 }
 
 // homemade array utility functions
@@ -136,3 +167,6 @@ Array.prototype.count = function(el){
   }
   return res;
 }
+
+
+
