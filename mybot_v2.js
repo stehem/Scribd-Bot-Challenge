@@ -1,7 +1,8 @@
-// v2, less dumb, still not the brightest tool in the shed...
+// v2, getting better
 
 
 var target;
+var start;
 
 
 function make_move(){
@@ -15,16 +16,20 @@ function make_move(){
       nw_quad = get_quadrant(0,my_x+1,0,my_y+1),
       ne_quad = get_quadrant(my_x,width,0,my_y+1),
       quads = [sw_quad,se_quad,nw_quad,ne_quad];
+  if (typeof start === 'undefined'){
+    target = eat_unique();
+    start = true;
+  }
   if (board[my_x][my_y] > 0){
     if (typeof target !== 'undefined' && target[0] === my_x && target[1] === my_y) target = undefined;
     return TAKE;
   }
   if (typeof target !== 'undefined' && board[target[0]][target[1]] === 0) target = undefined;
   if (typeof target !== 'undefined') {
-    return go_towards_target(target);
+    return eat_closest() || go_towards_target(target);
   }else{
-    target = get_best_in_quad(quad_with_most_types(quads)) || get_closest_in_quad(quad_with_most_types(quads));
-    return go_towards_target(target);
+    target = get_closest_in_quad(quad_with_most_types(quads));
+    return eat_closest() || go_towards_target(target);
   };
 }
 
@@ -59,11 +64,7 @@ function quad_with_most_types(quads){
   for (k=0;k<4;k++){
     res.push([count_types(quads[k]), quads[k]]);
   }
-  res.sort(function(a,b){
-    if (a[0] > b[0]) return -1;
-    if (a[0] < b[0]) return 1;
-    return 0;
-  });
+  res.assoc_sort_desc(0);
   return res[0][1];
 }
 
@@ -79,35 +80,32 @@ function get_closest_in_quad(quad){
       res.push([Math.abs(my_x-quad[i][0])+Math.abs(my_y-quad[i][1]),quad[i]]);
     }
   }
-  res.sort(function(a,b){
-    if (a[0] < b[0]) return -1;
-    if (a[0] > b[0]) return 1;
-    return 0;
-  });
-  return res[0][1];
+  res.assoc_sort_asc(0);
+  return best_among_closest(res.filter_closest(res[0][0]));
 }
+
+
 
 function best_to_eat(){
-res = [];
-for (i=1;i<6;i++){
-res.push([i,Math.abs(get_my_item_count(i)-get_opponent_item_count(i))]);
-}
-  res.sort(function(a,b){
-    if (a[1] < b[1]) return -1;
-    if (a[1] > b[1]) return 1;
-    return 0;
-  });
-return res[0][0];
+  res = [];
+  for (i=1;i<6;i++){
+    res.push([i,Math.abs(get_my_item_count(i)-get_opponent_item_count(i))]);
+  }
+  res.assoc_sort_asc(1);
+  return res[0][0];
 }
 
-function get_best_in_quad(quad){
-  res =[];
-  for (i=0;i++;i<quad.length){
-    var r = board[quad[i][0]][quad[i][1]];
-    if (r === best_to_eat()) res.push(quad[i]);
+
+function best_among_closest(closest){
+  var board = get_board(),
+      best = best_to_eat(),
+      res = [];
+  for (i=0;i<closest.length;i++){
+    var x = closest[i][0], y = closest[i][1];
+    if (board[x][y] === best) res.push(closest[i]);
   }
   if (res.length > 0) return res[0];
-  return false;
+  return closest[0];
 }
 
 
@@ -125,28 +123,33 @@ function go_towards_target(target){
 }
 
 
-function fruits_types_in_quad(quad){
-  var ftypes = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-  for (i=0;i<quad.length;i++){
-    var r = board[quad[i][0]][quad[i][1]];
-    if (r !== 0) ftypes[r] = ftypes[r] + 1
+function eat_unique(){
+  var board = get_board(),
+      res;
+  for (i=1;i<6;i++){
+    if (get_total_item_count(i) === 1) res = i;
   }
-  return ftypes;
+  if (typeof res !== 'undefined'){
+    for (j=0;j<WIDTH;j++){
+      for (k=0;k<HEIGHT;k++){
+        if (board[j][k] === res) var res2 = [j,k];
+      }
+    }
+    return res2;
+  }
 }
 
-
-function fruit_types_of_opponent(){
-  var otypes = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-  for (i=0;i<6;i++){
-    otypes[i] = get_opponent_item_count(i);
-  }
-  return otypes;
+function eat_closest(){
+  var board = get_board();
+  if (has_item(board[get_my_x()][get_my_y()+1])) return SOUTH;
+  if (board[get_my_x()+1] && has_item(board[get_my_x()+1][get_my_y()])) return EAST;
+  if (has_item(board[get_my_x()][get_my_y()-1])) return NORTH;
+  if (board[get_my_x()-1] && has_item(board[get_my_x()-1][get_my_y()])) return WEST;
 }
-
 
 
 function default_board_number(){
-  return 439037;
+  //return 221909;
 }
 
 // homemade array utility functions
@@ -169,4 +172,27 @@ Array.prototype.count = function(el){
 }
 
 
+Array.prototype.filter_closest = function(score){
+  var res = [];
+  for (i=0;i<this.length;i++){
+    if (this[i][0] === score) res.push(this[i][1]) ;
+  }
+  return res;
+}
 
+
+Array.prototype.assoc_sort_asc = function(n){
+  this.sort(function(a,b){
+    if (a[n] < b[n]) return -1;
+    if (a[n] > b[n]) return 1;
+    return 0;
+  });
+}
+
+Array.prototype.assoc_sort_desc = function(n){
+  this.sort(function(a,b){
+    if (a[n] > b[n]) return -1;
+    if (a[n] < b[n]) return 1;
+    return 0;
+  });
+}
