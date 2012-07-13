@@ -1,40 +1,60 @@
 // v2, getting better
 
 
-var target;
-var start;
-
-
 function make_move(){
-  var board = get_board(),
-      my_x = get_my_x(),
-      my_y = get_my_y(),
-      width = WIDTH,
-      height = HEIGHT,
-      se_quad = get_quadrant(my_x,width,my_y,height),
-      sw_quad = get_quadrant(0,my_x+1,my_y,height),
-      nw_quad = get_quadrant(0,my_x+1,0,my_y+1),
-      ne_quad = get_quadrant(my_x,width,0,my_y+1),
-      quads = [sw_quad,se_quad,nw_quad,ne_quad];
-  if (typeof start === 'undefined'){
-    target = eat_unique();
-    start = true;
+  var turn = new Turn();
+  return turn.direction;
+}
+
+
+function default_board_number(){
+  //return 926669;
+}
+
+
+var mybot = {
+  target: undefined,
+  start: undefined,
+  quad: undefined
+}
+
+
+var Turn = function(){
+  this.board = get_board(),
+  this.my_x = get_my_x(),
+  this.my_y = get_my_y(),
+  this.se_quad = this.get_quadrant(this.my_x,WIDTH,this.my_y,HEIGHT),
+  this.sw_quad = this.get_quadrant(0,this.my_x+1,this.my_y,HEIGHT),
+  this.nw_quad = this.get_quadrant(0,this.my_x+1,0,this.my_y+1),
+  this.ne_quad = this.get_quadrant(this.my_x,WIDTH,0,this.my_y+1),
+  this.quads = [this.sw_quad,this.se_quad,this.nw_quad,this.ne_quad],
+  this.direction = this.init();
+}
+
+
+Turn.prototype.init = function(){
+  if (mybot.start === undefined){
+    mybot.target = this.eat_unique();
+    mybot.start = true;
   }
-  if (board[my_x][my_y] > 0){
-    if (typeof target !== 'undefined' && target[0] === my_x && target[1] === my_y) target = undefined;
+  if (this.board[this.my_x][this.my_y] > 0){
+    if (mybot.target !== undefined && mybot.target[0] === this.my_x && mybot.target[1] === this.my_y) mybot.target = undefined;
     return TAKE;
   }
-  if (typeof target !== 'undefined' && board[target[0]][target[1]] === 0) target = undefined;
-  if (typeof target !== 'undefined') {
-    return eat_closest() || go_towards_target(target);
+  if (mybot.target !== undefined && this.board[mybot.target[0]][mybot.target[1]] === 0) mybot.target = undefined;
+  if (mybot.quad === undefined || (mybot.quad !== undefined && !this.has_fruits(mybot.quad))){
+    mybot.quad = this.quad_with_most_types(this.quads);
+  }
+  if (mybot.target !== undefined) {
+    return this.go_towards_target(mybot.target);
   }else{
-    target = get_closest_in_quad(quad_with_most_types(quads));
-    return eat_closest() || go_towards_target(target);
+    mybot.target = this.get_closest_in_quad(mybot.quad);
+    return this.go_towards_target(mybot.target);
   };
 }
 
 
-function get_quadrant(a,b,c,d){
+Turn.prototype.get_quadrant = function(a,b,c,d){
   var quad = [];
   for (i=a;i<b;i++){
     for (j=c;j<d;j++){
@@ -45,48 +65,63 @@ function get_quadrant(a,b,c,d){
 }
 
 
-function count_types(quad){
-  var board = get_board(),
-      res = [];
+Turn.prototype.count_types = function(quad){
+  var res = [];
   for (i=1;i<get_number_of_item_types()+1;i++){
     res.push(0);
   }
   for (j=0;j<quad.length;j++){
-    var r = board[quad[j][0]][quad[j][1]];
+    var r = this.board[quad[j][0]][quad[j][1]];
     if (r !== 0) res[r-1] = 1;
   }
   return res.count(1);
 }
 
 
-function quad_with_most_types(quads){
+Turn.prototype.count_fruits = function(quad){
+  var res = 0;
+  for (j=0;j<quad.length;j++){
+    var r = this.board[quad[j][0]][quad[j][1]];
+    if (r !== 0) res++;
+  }
+  return res;
+}
+
+
+Turn.prototype.quad_with_most_types = function(){
   var res = [];
   for (k=0;k<4;k++){
-    res.push([count_types(quads[k]), quads[k]]);
+    res.push([this.count_types(this.quads[k]), this.quads[k]]);
   }
   res.assoc_sort_desc(0);
   return res[0][1];
 }
 
 
-function get_closest_in_quad(quad){
-  var board = get_board(),
-      my_x = get_my_x(),
-      my_y = get_my_y();
-      res = [];
-  for (i=0;i<quad.length;i++){
-    var r = board[quad[i][0]][quad[i][1]];
-    if (r !== 0) {
-      res.push([Math.abs(my_x-quad[i][0])+Math.abs(my_y-quad[i][1]),quad[i]]);
-    }
+Turn.prototype.quad_with_most_fruits = function(){
+  var res = [];
+  for (k=0;k<4;k++){
+    res.push([this.count_fruits(this.quads[k]), this.quads[k]]);
   }
-  res.assoc_sort_asc(0);
-  return best_among_closest(res.filter_closest(res[0][0]));
+  res.assoc_sort_desc(0);
+  return res[0][1];
 }
 
 
+Turn.prototype.get_closest_in_quad = function(quad){
+  var res = [];
+  for (i=0;i<quad.length;i++){
+    var r = this.board[quad[i][0]][quad[i][1]];
+    if (r !== 0) {
+      res.push([Math.abs(this.my_x-quad[i][0])+Math.abs(this.my_y-quad[i][1]),quad[i]]);
+    }
+  }
+  res.assoc_sort_asc(0);
+  return this.best_among_closest(res.filter_closest(res[0][0]));
+}
 
-function best_to_eat(){
+
+Turn.prototype.best_to_eat = function(){
   res = [];
   for (i=1;i<6;i++){
     res.push([i,Math.abs(get_my_item_count(i)-get_opponent_item_count(i))]);
@@ -96,61 +131,59 @@ function best_to_eat(){
 }
 
 
-function best_among_closest(closest){
-  var board = get_board(),
-      best = best_to_eat(),
+Turn.prototype.best_among_closest = function(closest){
+  var best = this.best_to_eat(),
       res = [];
   for (i=0;i<closest.length;i++){
     var x = closest[i][0], y = closest[i][1];
-    if (board[x][y] === best) res.push(closest[i]);
+    if (this.board[x][y] === best) res.push(closest[i]);
   }
   if (res.length > 0) return res[0];
   return closest[0];
 }
 
 
-
-function go_towards_target(target){
-  var board = get_board(),
-      my_x = get_my_x(),
-      my_y = get_my_y();
-  if (target[1] === my_y && my_x < target[0]) return EAST;
-  if (target[1] === my_y && my_x > target[0]) return WEST;
-  if (target[0] === my_x && my_y < target[1]) return SOUTH;
-  if (target[0] === my_x && my_y > target[1]) return NORTH;
-  if (target[1] > my_y) {return SOUTH} else {return NORTH};
-  if (target[0] > my_x) {return WEST} else {return EAST};
+Turn.prototype.go_towards_target = function(target){
+  if (target[1] === this.my_y && this.my_x < target[0]) return EAST;
+  if (target[1] === this.my_y && this.my_x > target[0]) return WEST;
+  if (target[0] === this.my_x && this.my_y < target[1]) return SOUTH;
+  if (target[0] === this.my_x && this.my_y > target[1]) return NORTH;
+  if (target[1] > this.my_y) {return SOUTH} else {return NORTH};
+  if (target[0] > this.my_x) {return WEST} else {return EAST};
 }
 
 
-function eat_unique(){
-  var board = get_board(),
-      res;
+Turn.prototype.eat_unique = function(){
+  var res;
   for (i=1;i<6;i++){
     if (get_total_item_count(i) === 1) res = i;
   }
-  if (typeof res !== 'undefined'){
+  if (res !== 'undefined'){
     for (j=0;j<WIDTH;j++){
       for (k=0;k<HEIGHT;k++){
-        if (board[j][k] === res) var res2 = [j,k];
+        if (this.board[j][k] === res) var res2 = [j,k];
       }
     }
     return res2;
   }
 }
 
-function eat_closest(){
-  var board = get_board();
-  if (has_item(board[get_my_x()][get_my_y()+1])) return SOUTH;
-  if (board[get_my_x()+1] && has_item(board[get_my_x()+1][get_my_y()])) return EAST;
-  if (has_item(board[get_my_x()][get_my_y()-1])) return NORTH;
-  if (board[get_my_x()-1] && has_item(board[get_my_x()-1][get_my_y()])) return WEST;
+
+Turn.prototype.eat_closest = function(){
+  if (has_item(this.board[get_my_x()][get_my_y()+1])) return SOUTH;
+  if (this.board[get_my_x()+1] && has_item(this.board[get_my_x()+1][get_my_y()])) return EAST;
+  if (has_item(this.board[get_my_x()][get_my_y()-1])) return NORTH;
+  if (this.board[get_my_x()-1] && has_item(this.board[get_my_x()-1][get_my_y()])) return WEST;
 }
 
 
-function default_board_number(){
-  //return 221909;
+Turn.prototype.has_fruits = function(quad){
+  for (i=0;i<quad.length;i++){
+    if (this.board[quad[i][0]][quad[i][1]] > 0) return true;
+  }
+  return false;
 }
+ 
 
 // homemade array utility functions
 Array.prototype.remove_assoc_pair = function(arr){
@@ -162,6 +195,7 @@ Array.prototype.remove_assoc_pair = function(arr){
   }
   return this;
 }
+
 
 Array.prototype.count = function(el){
   var res = 0;
@@ -188,6 +222,7 @@ Array.prototype.assoc_sort_asc = function(n){
     return 0;
   });
 }
+
 
 Array.prototype.assoc_sort_desc = function(n){
   this.sort(function(a,b){
