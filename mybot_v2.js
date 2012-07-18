@@ -8,7 +8,7 @@ function make_move(){
 
 
 function default_board_number(){
-  //return 926669;
+  //return 783980;
 }
 
 
@@ -41,9 +41,16 @@ Turn.prototype.init = function(){
     if (mybot.target !== undefined && mybot.target[0] === this.my_x && mybot.target[1] === this.my_y) mybot.target = undefined;
     return TAKE;
   }
-  if (mybot.target !== undefined && this.board[mybot.target[0]][mybot.target[1]] === 0) mybot.target = undefined;
+  if (mybot.target !== undefined && (this.board[mybot.target[0]][mybot.target[1]] === 0 || (get_opponent_x() === mybot.target[0] && get_opponent_y() === mybot.target[1]))) {
+    mybot.target = undefined;
+    mybot.quad = undefined;
+  }
+  if (mybot.quad !== undefined && this.count_fruits_in_quad(mybot.quad) <= (this.most_fruits_in_quads() / 3)){
+    mybot.target = undefined;
+    mybot.quad = undefined;
+  }
   if (mybot.quad === undefined || (mybot.quad !== undefined && !this.has_fruits(mybot.quad))){
-    mybot.quad = this.quad_with_most_types(this.quads);
+    mybot.quad = this.quad_with_most_fruits(this.quads);
   }
   if (mybot.target !== undefined) {
     return this.go_towards_target(mybot.target);
@@ -183,7 +190,26 @@ Turn.prototype.has_fruits = function(quad){
   }
   return false;
 }
- 
+
+
+Turn.prototype.count_fruits_in_quad = function(quad){
+  var res = 0;
+  var board = get_board();
+  for (i=0;i<quad.length;i++){
+    if (board[quad[i][0]][quad[i][1]] > 0) res++;
+  }
+  return res;
+}
+
+
+Turn.prototype.most_fruits_in_quads = function(){
+  var res = 0;
+  for (i=0;i<4;i++){
+    var r = this.count_fruits_in_quad(this.quads[i]);
+    if (r > res) res = r; 
+  }
+  return res;
+}
 
 // homemade array utility functions
 Array.prototype.remove_assoc_pair = function(arr){
