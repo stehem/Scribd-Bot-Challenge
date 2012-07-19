@@ -1,6 +1,3 @@
-// v2, getting better
-
-
 function make_move(){
   var turn = new Turn();
   return turn.direction;
@@ -34,8 +31,7 @@ var Turn = function(){
 
 Turn.prototype.init = function(){
   if (mybot.start === undefined){
-    if (get_number_of_item_types() < 4) mybot.target = this.eat_unique();
-    //mybot.target = this.eat_unique();
+    mybot.target = this.eat_unique();
     mybot.start = true;
   }
   // bot on a fruit?
@@ -52,7 +48,7 @@ Turn.prototype.init = function(){
     mybot.target = undefined;
     mybot.quad = undefined;
   }
-  if (mybot.quad === undefined || !this.has_fruits(mybot.quad) ){
+  if (mybot.quad === undefined || !this.has_fruits(mybot.quad) || (this.count_fruits(mybot.quad) < this.count_fruits(this.quad_with_most_fruits())) ){
     mybot.quad = this.quad_with_most_fruits(this.quads);
   }
   if (mybot.target !== undefined) {
