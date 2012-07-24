@@ -1,18 +1,20 @@
+// this one is 200/800
+// need to add some clever pathfinding and top100 is mine muahahahahah :-)
+
 function make_move(){
   var turn = new Turn();
   return turn.direction;
 }
 
 
-function default_board_number(){
-  return 177877;
-}
-
-
-
 var mybot = {
   target: undefined,
   type_priorities: undefined
+}
+
+
+function default_board_number(){
+  //return 92085;
 }
 
 
@@ -37,7 +39,7 @@ Turn.prototype.init = function(){
       pos_opponent =  [get_opponent_x(),get_opponent_y()],
       my_dist_from_target = this.distance_from_target(pos_target, pos_player),
       opp_dist_from_target = this.distance_from_target(pos_target, pos_opponent),
-      safe_distance = opp_dist_from_target-my_dist_from_target>=0;
+      safe_distance = opp_dist_from_target-my_dist_from_target>=2;
   //if (on_target || (on_fruit && prio_fruit && safe_distance)){
   if (on_target || (on_fruit && safe_distance)){
     return TAKE;
@@ -214,4 +216,27 @@ Array.prototype.assoc_sort_desc = function(n){
 }
 
 
+var best_path = function(target,position){
+  var x = Math.abs(target[0] - position[0]), y = Math.abs(target[1] - position[1]), res = [];
+  for (i=get_my_y();i<get_my_y()+y+1;i++){
+    for (j=get_my_x();j<get_my_x()+x+1;j++){
+      res.push([j,i]);
+    }
+  }
+  var pred = function(arr){
+    if (get_board()[arr[0]][arr[1]] !== 0) return true;
+      return false;
+  }
+  res.filter(pred);
+  return res;       
+}
 
+Array.prototype.filter = function(predicate){
+  for (i=0;i<this.length;i++){
+    if (!predicate(this[i])) {
+      this.splice(i,1);
+      i--;
+    }
+  }
+  return this;
+}
